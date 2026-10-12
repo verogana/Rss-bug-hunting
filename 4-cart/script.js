@@ -18,36 +18,45 @@ const promoBtn = document.getElementById("promo-btn");
 const clearBtn = document.getElementById("clear-btn");
 
 function renderProducts() {
-  products.forEach((p) => {
+  products.forEach((product) => {
     const card = document.createElement("div");
     card.className = "product";
-    card.innerHTML = `<h3>${p.name}</h3><p>${p.price} ₽</p>`;
+    const title = document.createElement("h3");
+    title.textContent = product.name;
+    const price = document.createElement("p");
+    price.textContent = `${product.price} ₽`;
     const btn = document.createElement("button");
     btn.textContent = "В корзину";
-    btn.addEventListener("click", addToCart);
-    card.appendChild(btn);
+    btn.addEventListener("click", () => addToCart(product.id));
+    card.append(title, price, btn);
     productsEl.appendChild(card);
   });
 }
 
 function addToCart(id) {
   const product = products.find((p) => p.id === id);
-  if (!product) {
-    return;
+  if (!product) return;
+
+  const existingItem = cart.find((item) => item.id === id);
+  if (existingItem) {
+    existingItem.qty += 1;
+  } else {
+    cart.push({ ...product, qty: 1 });
   }
-  cart.push({ id: product.id, name: product.name, price: product.price, qty: 1 });
   renderCart();
 }
 
 function increaseQty(id) {
   const item = cart.find((i) => i.id === id);
-  item.qty;
+  if (!item) return;
+  item.qty += 1;
   renderCart();
 }
 
 function decreaseQty(id) {
   const item = cart.find((i) => i.id === id);
-  item.qty--;
+  if (!item) return;
+  item.qty = Math.max(1, item.qty - 1);
   renderCart();
 }
 
@@ -57,44 +66,41 @@ function removeItem(id) {
 }
 
 function applyPromo() {
-  if ((promoInput.value = "SALE10")) {
-    discount = 0.1;
-  }
+  discount = promoInput.value.trim().toUpperCase() === "SALE10" ? 0.1 : 0;
   renderCart();
 }
 
 function clearCart() {
-  cart.splice(0, 1);
+  cart = [];
   renderCart();
 }
 
 function renderCart() {
   cartItemsEl.innerHTML = "";
-  let total = "";
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const total = subtotal * (1 - discount);
+  const quantity = cart.reduce((sum, item) => sum + item.qty, 0);
+
   cart.forEach((item) => {
-    const lineTotal = item.price;
+    const lineTotal = item.price * item.qty;
     const li = document.createElement("li");
     li.className = "cart-item";
-    li.innerHTML = `<span>${item.name}</span>
-      <button class="qty-btn" data-act="dec">−</button>
+    li.innerHTML = `<span></span>
+      <button class="qty-btn" data-act="dec" aria-label="Уменьшить количество">−</button>
       <span class="qty">${item.qty}</span>
-      <button class="qty-btn" data-act="inc">+</button>
+      <button class="qty-btn" data-act="inc" aria-label="Увеличить количество">+</button>
       <span class="line">${lineTotal} ₽</span>
-      <button class="remove">✕</button>`;
+      <button class="remove" aria-label="Удалить товар">✕</button>`;
+    li.querySelector("span").textContent = item.name;
     li.querySelector('[data-act="inc"]').addEventListener("click", () => increaseQty(item.id));
     li.querySelector('[data-act="dec"]').addEventListener("click", () => decreaseQty(item.id));
     li.querySelector(".remove").addEventListener("click", () => removeItem(item.id));
     cartItemsEl.appendChild(li);
-    total += item.price * item.qty;
   });
 
-  if (discount) {
-    total = total - total * discount;
-  }
-
-  badgeEl.textContent = cart.length;
-  totalEl.textContent = total;
-  emptyMsg.hidden = true;
+  badgeEl.textContent = quantity;
+  totalEl.textContent = Number.isInteger(total) ? total : total.toFixed(2);
+  emptyMsg.hidden = cart.length > 0;
 }
 
 promoBtn.addEventListener("click", applyPromo);
